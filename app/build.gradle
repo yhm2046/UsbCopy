@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.3"
+    compileSdkVersion 29
+    buildToolsVersion "29"
 
     defaultConfig {
         applicationId "com.cnd.zhongkong.usbcopy"
-        minSdkVersion 29
-        targetSdkVersion 30
+        minSdkVersion 27
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
 
@@ -29,7 +29,12 @@ android {
 }
 
 dependencies {
+//    include usb reader
     compile 'com.github.mjdev:libaums:+'
+//    implementation 'me.jahnen:libaums:0.8.0'
+//    implementation 'me.jahnen:libaums-httpserver:0.5.3'
+//    implementation 'me.jahnen:libaums-storageprovider:0.5.1'
+
     implementation 'androidx.appcompat:appcompat:1.3.0'
     implementation 'com.google.android.material:material:1.3.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
