@@ -3,6 +3,7 @@ package com.cnd.zhongkong.usbcopy;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,29 +13,45 @@ import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
 
+import com.cnd.zhongkong.usbcopy.databinding.ActivityMainBinding;
 import com.github.mjdev.libaums.UsbMassStorageDevice;
+import com.github.mjdev.libaums.fs.FileSystem;
 import com.github.mjdev.libaums.fs.UsbFile;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private String TAG="MainActivity:xwg";
-//    private UDiskCallBack.OnUDiskCallBack mOnUDiskCallBack = null;
+    private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     private Context mContext;
     private UsbMassStorageDevice[] storageDevices;
     private List<UsbFile> usbFiles = new ArrayList<>();
-//    private final UsbManager mUsbManager;
+    private ActivityMainBinding activityMainBinding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        Log.i(TAG,"oncreate..");
+//        setContentView(R.layout.activity_main);
+        activityMainBinding=ActivityMainBinding.inflate(LayoutInflater.from(this));
+        setContentView(activityMainBinding.getRoot());
+        activityMainBinding.btnWrite.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(redUDiskDevsList())
+                    Log.i(TAG,"u盘可用");
+                else
+                    Log.i(TAG,"u盘不可用");
+            }
+        });
+
         IntentFilter usbDeviceStateFilter = new IntentFilter();
-        usbDeviceStateFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
-        usbDeviceStateFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        usbDeviceStateFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);  //usb插入
+        usbDeviceStateFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);  //usb拔出
         registerReceiver(mUsbReceiver, usbDeviceStateFilter);
     }
 
@@ -54,19 +71,62 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
     }
+
     BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
                 Log.e(TAG,"拔出usb了");
+
+            }else if(UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)){
                 UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                 if (device != null) {
                     Log.e(TAG,"设备的ProductId值为："+device.getProductId());
                     Log.e(TAG,"设备的VendorId值为："+device.getVendorId());
                 }
-            }else if(UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)){
-                Log.e(TAG,"插入usb了");
+                redUDiskDevsList();
             }
         }
     };
+    private boolean redUDiskDevsList() {
+        boolean mU_disk_ok=false;
+        //设备管理器
+        UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        //获取U盘存储设备
+        storageDevices = UsbMassStorageDevice.getMassStorageDevices(this);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
+        //一般手机只有1个OTG插口
+        for (UsbMassStorageDevice device : storageDevices) {
+            //读取设备是否有权限
+            if (usbManager.hasPermission(device.getUsbDevice())) {
+                readDevice();
+                mU_disk_ok = true;
+                Log.i(TAG, "获取到权限: "+mU_disk_ok);
+            } else {
+                Log.i(TAG,"没有权限，进行申请");
+                usbManager.requestPermission(device.getUsbDevice(), pendingIntent);
+            }
+        }
+        return mU_disk_ok;
+    }
+
+    private void readDevice() {
+        try {
+            UsbMassStorageDevice[] devices = UsbMassStorageDevice.getMassStorageDevices(this /* Context or Activity */);
+            for(UsbMassStorageDevice device: devices) {
+                device.init();
+                FileSystem currentFs = device.getPartitions().get(0).getFileSystem();
+                Log.i(TAG, "Capacity: " + currentFs.getCapacity());
+                Log.i(TAG, "Occupied Space: " + currentFs.getOccupiedSpace());
+                Log.i(TAG, "Free Space: " + currentFs.getFreeSpace());
+                Log.i(TAG, "Chunk size: " + currentFs.getChunkSize());
+            }
+            Log.i(TAG,"readDevice success!");
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.i(TAG,"readDevice error:"+e.toString());
+        }
+
+    }
+
 }
