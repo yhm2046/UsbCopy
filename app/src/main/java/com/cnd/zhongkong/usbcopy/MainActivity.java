@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private String TAG="MainActivity:xwg";
+    private String TAG="wxl";
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     private Context mContext;
     private UsbMassStorageDevice[] storageDevices;
@@ -36,19 +36,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        setContentView(R.layout.activity_main);
         activityMainBinding=ActivityMainBinding.inflate(LayoutInflater.from(this));
         setContentView(activityMainBinding.getRoot());
         activityMainBinding.btnWrite.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.i(TAG,"onclick");
                 if(redUDiskDevsList())
                     Log.i(TAG,"u盘可用");
                 else
                     Log.i(TAG,"u盘不可用");
             }
         });
-
+        Log.i(TAG,"oncreate");
         IntentFilter usbDeviceStateFilter = new IntentFilter();
         usbDeviceStateFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);  //usb插入
         usbDeviceStateFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);  //usb拔出
@@ -71,23 +71,30 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
     }
-
+//动态广播监听拔插U盘
     BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
+            Log.i(TAG,"onReceive");
             String action = intent.getAction();
             if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-                Log.e(TAG,"拔出usb了");
+                Log.i(TAG,"拔出usb了");
 
             }else if(UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)){
+                Log.i(TAG,"插入usb了");
                 UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                 if (device != null) {
-                    Log.e(TAG,"设备的ProductId值为："+device.getProductId());
-                    Log.e(TAG,"设备的VendorId值为："+device.getVendorId());
+                    Log.i(TAG,"设备的ProductId值为："+device.getProductId());
+                    Log.i(TAG,"设备的VendorId值为："+device.getVendorId());
                 }
-                redUDiskDevsList();
+//                redUDiskDevsList();
             }
         }
     };
+
+    /**
+     * 读取usb设备列表,可能不止一个usb设备
+     * @return
+     */
     private boolean redUDiskDevsList() {
         boolean mU_disk_ok=false;
         //设备管理器
@@ -110,6 +117,9 @@ public class MainActivity extends AppCompatActivity {
         return mU_disk_ok;
     }
 
+    /**
+     * 读取usb设备信息
+     */
     private void readDevice() {
         try {
             UsbMassStorageDevice[] devices = UsbMassStorageDevice.getMassStorageDevices(this /* Context or Activity */);
